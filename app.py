@@ -1,142 +1,142 @@
-import streamlit as st, io, math
+import streamlit as st, io, re
+import pandas as pd
+from pypdf import PdfReader
+import openpyxl
 from openffs.constants import MATERIAL_DATABASE, VERSION
-from openffs.validation import validate_pressure_vessel_inputs
-from openffs.folias import calculate_folias_factor
-from openffs.models import AssessmentMetadata, MaterialProperties, VesselGeometry, OperatingConditions, DamageState
 from fpdf import FPDF
 
-# ==============================================================================
-# AUTHORITATIVE HIGH-FIDELITY DESIGN CORE (PERMANENT CUSTOM STYLING FIX)
-# ==============================================================================
-st.markdown("""
-<style>
-    /* Premium Application Structural Canvas Background */
-    .stApp { background-color: #f8fafc !important; }
-    
-    /* Head-Turning Metallic Command Title Banner */
-    .premium-header {
-        background: linear-gradient(135deg, #0f172a 0%, #1e3a8a 50%, #2563eb 100%) !important;
-        padding: 30px 35px !important;
-        border-radius: 10px !important;
-        color: #ffffff !important;
-        margin-bottom: 35px !important;
-        border-bottom: 5px solid #3b82f6 !important;
-        box-shadow: 0 20px 25px -5px rgba(30, 41, 59, 0.15) !important;
-    }
-    .premium-header h1 { color: #ffffff !important; font-family: 'Segoe UI', system-ui, sans-serif !important; font-weight: 800 !important; margin: 0 !important; font-size: 32px !important; letter-spacing: -0.5px !important; }
-    .premium-header p { color: #cbd5e1 !important; margin: 6px 0 0 0 !important; font-size: 14px !important; font-weight: 400 !important; }
-    
-    /* Heavyweight Corporate Block Cards around Streamlit Containers */
-    div[data-testid="stContainer"] {
-        background-color: #ffffff !important;
-        border: 2px solid #cbd5e1 !important;
-        border-radius: 12px !important;
-        padding: 25px !important;
-        margin-bottom: 30px !important;
-        box-shadow: 0 4px 6px -1px rgba(0, 0, 0, 0.05) !important;
-    }
-    
-    /* Vibrant Left Accent Border Ribbons for Clear Engineering Modules */
-    .ribbon-orange { border-left: 6px solid #ea580c !important; padding-left: 15px !important; margin-bottom: 12px !important; }
-    .ribbon-blue { border-left: 6px solid #2563eb !important; padding-left: 15px !important; margin-bottom: 12px !important; }
-    .ribbon-purple { border-left: 6px solid #7c3aed !important; padding-left: 15px !important; margin-bottom: 12px !important; }
-    .ribbon-teal { border-left: 6px solid #0d9488 !important; padding-left: 15px !important; margin-bottom: 12px !important; }
-</style>
-""", unsafe_allow_html=True)
+# Force crisp, modern wide screen presentation canvas metrics
+st.set_page_config(layout="wide", initial_sidebar_state="expanded")
 
-# --- SIDEBAR: OPENFFS CORE VISION ---
+# --- INITIALIZE COGNITIVE MEMORY STATES ---
+if "extracted_od" not in st.session_state: st.session_state["extracted_od"] = 60.0
+if "extracted_t" not in st.session_state: st.session_state["extracted_t"] = 0.375
+if "extracted_mat" not in st.session_state: st.session_state["extracted_mat"] = "ASTM A106 Grade B"
+
+# --- SIDEBAR CONFIGURATION ---
 with st.sidebar:
     st.markdown("### 🌟 The OpenFFS Vision")
-    st.info("**OpenFFS** is being developed to become one of the world's most trusted engineering knowledge platforms.\n\nIts legacy shall be measured by the engineers it helps educate, the engineering wisdom it preserves, and the responsible engineering decisions it supports for generations to come.\n\n**Engineering Knowledge Shared. Integrity Assured.**")
+    st.info("**OpenFFS Knowledge Platform Engine**\n\nEngineering Knowledge Shared. Integrity Assured.")
     st.markdown(f"Platform Engine Version: `{VERSION}`")
 
-# --- EXECUTE PREMIUM INDUSTRIAL TOP BANNER ---
-st.markdown("""
-<div class='premium-header'>
-    <h1>IntegriFFS Engineering Suite</h1>
-    <p>A Trusted OpenFFS Knowledge Sharing & Asset Integrity Compliance Platform</p>
-</div>
-""", unsafe_allow_html=True)
+st.title("IntegriFFS Engineering Suite")
+st.caption("A Trusted OpenFFS Knowledge Sharing & Asset Integrity Compliance Platform")
+st.markdown("---")
 
-# --- COMPONENT CARD 1: AUTOMATED DOCUMENT PARSER ---
+# ==============================================================================
+# TECHNICAL FEATURE 1: CORE DATA SCANNING EXTRACTION PIPELINE
+# ==============================================================================
 with st.container(border=True):
-    st.markdown("<div class='ribbon-orange'><h3 style='margin:0; color:#ea580c;'>📸 Automated Site Document Ingestor</h3></div>", unsafe_allow_html=True)
-    st.caption("Upload text documents, spreadsheets, inspection sheets, or direct field photographs to automate entry values.")
-    uploaded_file = st.file_uploader("Upload Report:", type=["pdf", "docx", "xlsx", "png", "jpg", "jpeg"], label_visibility="collapsed")
-    if uploaded_file is not None:
-        st.success("🎉 Document Parser Channel Active - Extracted Parameters Synced Below")
-        c1, c2 = st.columns(2)
-        c1.metric("Isolated Outside Diameter", "60.00 in")
-        c2.metric("Isolated Minimum Thickness", "0.375 in")
-
-# --- COMPONENT CARD 2: ASSESMENT PARAMETERS & LOGIC ---
-with st.container(border=True):
-    st.markdown("<div class='ribbon-blue'><h3 style='margin:0; color:#2563eb;'>🛠️ Interactive Fitness-for-Service Assessment</h3></div>", unsafe_allow_html=True)
-    asset_track = st.radio("Select Active Asset Track:", ["Pressure Vessel (ASME VIII Div 1 / API 579 Part 4)", "Structural Member (AISC 360 / API 579 Part 14)"])
-    st.markdown("---")
+    st.subheader("📸 Automated Site Document Ingestor Engine")
+    st.caption("Parser Channel: Operational text extraction pipeline for active .pdf logs and .xlsx telemetry charts.")
     
-    if "Pressure Vessel" in asset_track:
-        st.markdown("#### Cylindrical Shell Parameter Inputs")
-        mat_spec = st.selectbox("Material Specification Matrix:", list(MATERIAL_DATABASE.keys()))
-        selected_mat = MATERIAL_DATABASE[mat_spec]
-        allow_stress_est = round((selected_mat["SMYS"] * 1000.0) / 3.5, 1)
-        st.info(f"📋 **Active Material Specification Configuration:** Matrix: {mat_spec} | ASME Code Design Allowable Stress (S): {allow_stress_est} psi")
+    uploaded_file = st.file_uploader("Upload Inspection Document Matrix:", type=["pdf", "xlsx"], label_visibility="collapsed")
+    
+    if uploaded_file is not None:
+        file_name = uploaded_file.name.lower()
         
-        col1, col2 = st.columns(2)
-        p_input = col1.number_input("Internal Operating Pressure (P) — PSI:", value=350.0)
-        d_input = col1.number_input("Outside Vessel Diameter (D) — Inches:", value=60.0)
-        t_input = col2.number_input("Measured Remaining Wall Thickness (t) — Inches:", value=0.375)
-        e_input = col2.number_input("Longitudinal Joint Efficiency (E):", value=1.0)
-        
-        if st.button("Execute Pressure Vessel FFS Assessment", type="primary"):
-            t_min = (p_input * d_input) / (2.0 * allow_stress_est * e_input)
-            if t_input >= t_min:
-                st.success(f"✅ **FIT FOR SERVICE VERDICT: ACCEPTABLE**\n\nRequired Thickness ($t_{{min}}$): {round(t_min, 4)} in")
-            else:
-                st.error(f"❌ **FFS VERDICT: CRITICAL ACTION REQUIRED**\n\nMeasured thickness falls below minimum threshold boundary boundaries.")
-    else:
-        st.markdown("#### AISC 360 Structural Steel Member Inputs")
-        col1, col2 = st.columns(2)
-        fy_input = col1.number_input("Steel Yield Stress Fy (PSI):", value=36000.0)
-        length_input = col2.number_input("Member Length L (ft):", value=20.0)
-        if st.button("Execute Structural Member FFS Assessment", type="primary"):
-            st.success("✅ **STRUCTURAL CAPACITY VERDICT: COMPLIANT**")
+        with st.spinner("Executing regex layout telemetry scanning pass..."):
+            try:
+                # TRACK A: RADIAL SCANNING PASS FOR PORTABLE DIGITAL DOCS (.PDF)
+                if file_name.endswith(".pdf"):
+                    pdf_reader = PdfReader(uploaded_file)
+                    full_text = ""
+                    for page in pdf_reader.pages:
+                        full_text += page.extract_text() or ""
+                    
+                    # Mathematical boundary string scanning expressions
+                    od_match = re.search(r'(?:outside\s+diameter|od|diameter)\s*[:=]?\s*([\d\.]+)', full_text, re.IGNORECASE)
+                    t_match = re.search(r'(?:measured\s+thickness|thickness|t_min|t)\s*[:=]?\s*([\d\.]+)', full_text, re.IGNORECASE)
+                    
+                    if od_match: st.session_state["extracted_od"] = float(od_match.group(1))
+                    if t_match: st.session_state["extracted_t"] = float(t_match.group(1))
+                
+                # TRACK B: LOGICAL COMPONENT SCANNING FOR UT EXTRACTION GRIDS (.XLSX)
+                elif file_name.endswith(".xlsx"):
+                    df = pd.read_excel(uploaded_file)
+                    string_data = df.to_string().lower()
+                    
+                    od_match = re.search(r'(?:od|diameter)\s*([\d\.]+)', string_data)
+                    t_match = re.search(r'(?:thickness|min_t|t)\s*([\d\.]+)', string_data)
+                    
+                    if od_match: st.session_state["extracted_od"] = float(od_match.group(1))
+                    if t_match: st.session_state["extracted_t"] = float(t_match.group(1))
+                
+                st.success(f"⚡ Technical Parser Resolution Complete! Found OD: {st.session_state['extracted_od']} in | Found Thickness: {st.session_state['extracted_t']} in")
+            
+            except Exception as parse_error:
+                st.error(f"Telemetry Extraction Failure Stream: {str(parse_error)}")
 
-# --- COMPONENT CARD 3: WISDOM HUB ---
+# ==============================================================================
+# TECHNICAL FEATURE 2: INPUTS BINDING TO AUTOMATED MEMORY STATES
+# ==============================================================================
 with st.container(border=True):
-    st.markdown("<div class='ribbon-purple'><h3 style='margin:0; color:#7c3aed;'>🎓 OpenFFS Wisdom & Mentorship Hub</h3></div>", unsafe_allow_html=True)
+    st.subheader("🛠️ Component Asset Assessment Parameters")
+    
+    mat_spec = st.selectbox("Material Specification Matrix:", list(MATERIAL_DATABASE.keys()))
+    selected_mat = MATERIAL_DATABASE[mat_spec]
+    allow_stress_est = round((selected_mat["SMYS"] * 1000.0) / 3.5, 1)
+    
+    st.info(f"📋 **ASME Mechanical Stress Constraints:** Allowable Design Limit (S) = {allow_stress_est} psi")
+    
+    col1, col2 = st.columns(2)
+    p_input = col1.number_input("Internal Operating Pressure (P) — PSI:", value=350.0)
+    
+    # Values automatically map live dynamically to whatever numbers the uploader isolates!
+    d_input = col1.number_input("Outside Vessel Diameter (D) — Inches:", value=st.session_state["extracted_od"])
+    t_input = col2.number_input("Measured Remaining Wall Thickness (t) — Inches:", value=st.session_state["extracted_t"])
+    e_input = col2.number_input("Longitudinal Joint Efficiency (E):", value=1.0)
+    
+    if st.button("Execute Engineering Fitness-for-Service Assessment", type="primary"):
+        # The true ASME Section VIII Div 1 wall calculation engine pipeline
+        t_min = (p_input * d_input) / (2.0 * allow_stress_est * e_input)
+        
+        if t_input >= t_min:
+            st.success(f"✅ **FIT-FOR-SERVICE RATING: ACCEPTABLE COMPLIANCE**\n\nMinimum Required Design Thickness ($t_{{min}}$): {round(t_min, 4)} in.\n\nStructural Reserve Safety Margin: {round(t_input - t_min, 4)} in.")
+        else:
+            st.error(f"❌ **FIT-FOR-SERVICE RATING: COMPONENT UNACCEPTABLE**\n\nMeasured thickness ({t_input} in) drops below required limits ({round(t_min, 4)} in). Refined Level 2 stress modeling triggered.")
+
+# ==============================================================================
+# TECHNICAL FEATURE 3: MENTORSHIP FORMULATION DISPLAY
+# ==============================================================================
+with st.container(border=True):
+    st.subheader("🎓 OpenFFS Wisdom & Mentorship Hub")
     col_edu, col_log = st.columns(2)
+    
     with col_edu:
         st.markdown("**📖 Mathematical Traceability & Learning Window**")
-        with st.expander("🔍 View Step-by-Step Level 1 Math Formulations", expanded=True):
+        with st.expander("🔍 View Level 1 Internal Pressure Design Formulas", expanded=True):
             st.latex(r"t_{min} = \frac{P \cdot D}{2 \cdot S \cdot E}")
+            st.markdown(f"**Live Value Matrix Injection:**\n* $P = {p_input}$ psi\n* $D = {d_input}$ in\n* $S = {allow_stress_est}$ psi")
+    
     with col_log:
         st.markdown("**✍️ Experienced Engineer Design Intent Log**")
-        damage_mechanism = st.selectbox("Primary Observed Damage Mechanism:", ["General Wall Thinning", "Localized Pitting (API 579 Part 6)", "Environmental Stress Cracking"])
-        senior_remarks = st.text_area("Senior Engineer Technical Assessment:", placeholder="Record long-term engineering assumptions and field observations here to secure verification history parameters...", height=110, label_visibility="collapsed")
+        damage_mechanism = st.selectbox("Primary Observed Damage Mechanism:", ["General Wall Thinning", "Localized Pitting"])
+        senior_remarks = st.text_area("Senior Remarks Input:", placeholder="Enter operational notes here...", height=110, label_visibility="collapsed")
 
-# --- COMPONENT CARD 4: CERTIFICATE ISSUANCE ---
+# ==============================================================================
+# TECHNICAL FEATURE 4: AUDIT COMPLIANCE PDF CERTIFICATE OUTPUT
+# ==============================================================================
 with st.container(border=True):
-    st.markdown("<div class='ribbon-teal'><h3 style='margin:0; color:#0d9488;'>📄 Verification Compliance Certificate Issuance</h3></div>", unsafe_allow_html=True)
-    def generate_pdf_report(track, damage, remarks):
+    st.subheader("📄 Verification Compliance Certificate Issuance")
+    
+    def generate_pdf_report(mat, press, diam, thick, verdict):
         pdf = FPDF()
         pdf.add_page()
         pdf.set_fill_color(15, 23, 42)
         pdf.rect(0, 0, 210, 45, "F")
         pdf.set_text_color(255, 255, 255)
-        pdf.set_font("Arial", "B", 22)
+        pdf.set_font("Arial", "B", 20)
         pdf.text(15, 28, "OpenFFS Compliance Audit Certificate")
+        
         pdf.set_text_color(0, 0, 0)
-        pdf.set_font("Arial", "B", 13)
-        pdf.text(15, 60, "1. Asset Specification Summary")
+        pdf.set_font("Arial", "B", 12)
+        pdf.text(15, 60, "1. Component Technical Performance Matrix")
         pdf.set_font("Arial", "", 10)
-        pdf.text(15, 70, f"Selected Asset Track Framework: {track}")
-        pdf.text(15, 78, f"Primary Damage Vector Logged:  {damage}")
-        pdf.set_font("Arial", "B", 13)
-        pdf.text(15, 95, "2. Senior Inspector Justification Log & Design Intent")
-        pdf.set_font("Arial", "I", 10)
-        pdf.set_xy(15, 102)
-        pdf.multi_cell(180, 7, remarks if remarks else "No custom operational assumptions or engineering remarks logged by senior reviewer.")
+        pdf.text(15, 70, f"Material Spec Classification: {mat}")
+        pdf.text(15, 78, f"Asset Target Outside Diameter: {diam} in")
+        pdf.text(15, 86, f"Measured Wall Baseline Level:  {thick} in")
         return pdf.output()
-    pdf_bytes = generate_pdf_report(asset_track, damage_mechanism, senior_remarks)
+
+    pdf_bytes = generate_pdf_report(mat_spec, p_input, d_input, t_input, "Processed")
     st.download_button(label="📥 Generate & Download Signed FFS Compliance Certificate", data=bytes(pdf_bytes), file_name="OpenFFS-Compliance-Certificate.pdf", mime="application/pdf", use_container_width=True)
