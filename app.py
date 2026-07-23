@@ -131,22 +131,94 @@ with st.container(border=True):
         length_input = col2.number_input("Member Length L (ft):", value=20.0)
 
 # ==============================================================================
-# FEATURE 4: THE INTEGRATED WISDOM & COMPLIANCE GENERATOR
+# FEATURE 4: DYNAMIC MULTI-PAGE COMBINED LEVEL 1 / LEVEL 2 PDF REPORT ENGINE
 # ==============================================================================
-with st.container(border=True):
-    st.subheader("🎓 OpenFFS Wisdom & Mentorship Hub")
-    col_edu, col_log = st.columns(2)
-    with col_edu:
-        st.markdown("**📖 Mathematical Traceability & Learning Window**")
-        with st.expander("🔍 View Step-by-Step Mathematical Evaluation Logic Frameworks", expanded=True):
-            st.latex(r"\lambda = \frac{d}{t_w} \quad \text{vs.} \quad \lambda_p = 2.42 \sqrt{\frac{E}{F_y}}")
-            st.caption("AISC 360 limits section compactness boundaries to predict localized web buckling failures before cross-section yield limits are reached.")
-    with col_log:
-        st.markdown("**✍️ Experienced Engineer Design Intent Log**")
-        damage_mechanism = st.selectbox("Primary Observed Damage Mechanism:", ["General Wall Thinning", "Localized Pitting", "Structural Member Buckling & Elastic Distortion"])
-        senior_remarks = st.text_area("Senior Remarks Input:", placeholder="Record long-term component operational tracking data anomalies here...", height=110, label_visibility="collapsed")
+def generate_pdf_report(df_data, remarks):
+    pdf = FPDF()
+    pdf.add_page()
+    
+    # Authoritative Executive Top Header Banner Configuration
+    pdf.set_fill_color(15, 23, 42) # Deep corporate charcoal
+    pdf.rect(0, 0, 210, 45, "F")
+    pdf.set_text_color(255, 255, 255)
+    pdf.set_font("Arial", "B", 18)
+    pdf.text(15, 26, "OpenFFS Combined Compliance Audit Manifest")
+    pdf.set_font("Arial", "", 10)
+    pdf.text(15, 34, "Asset Integrity Screening Loop & Mechanical Evaluation Logs")
+    
+    # Section 1: Executive Capacity Analytics Metrics
+    pdf.set_text_color(0, 0, 0)
+    pdf.set_font("Arial", "B", 12)
+    pdf.text(15, 58, "1. Executive Facility Assessment Summary Matrix")
+    
+    pdf.set_font("Arial", "", 10)
+    pdf.text(15, 68, f"Total Facility Components Screened:     {len(df_data)}")
+    
+    compliant_count = len(df_data[df_data['FFS Screening Status'] == 'Compliant'])
+    critical_count = len(df_data[df_data['FFS Screening Status'] != 'Compliant'])
+    
+    pdf.text(15, 75, f"Level 1 Safe Operational Pass Marks:   {compliant_count} (Capacity Confirmed)")
+    pdf.text(15, 82, f"Level 2 Refined Analysis Mandates:      {critical_count} (Action Required Indicators)")
+    
+    # Section 2: Render Structured Multi-Asset Data Table Grid
+    pdf.set_font("Arial", "B", 12)
+    pdf.text(15, 98, "2. Multi-Component FFS Evaluation Registry Table")
+    
+    # Build High-Contrast Table Header Row
+    pdf.set_fill_color(226, 232, 240) # Slate grey grid accent
+    pdf.rect(15, 104, 180, 8, "F")
+    pdf.set_font("Arial", "B", 9)
+    pdf.text(18, 110, "Asset ID Identifier Tag")
+    pdf.text(65, 110, "Core Profile Thickness")
+    pdf.text(105, 110, "Slenderness Ratio")
+    pdf.text(142, 110, "FFS Evaluation Screening Verdict")
+    
+    # Loop data table rows dynamically out of live session dataframes
+    pdf.set_font("Arial", "", 9)
+    y_position = 119
+    
+    for index, row in df_data.iterrows():
+        # Prevent row matrices from spilling off the lower layout canvas margin boundaries
+        if y_position > 270:
+            pdf.add_page()
+            y_position = 25 # Re-anchor tracking coordinates on subsequent document sheets
+            
+        pdf.text(18, y_position, str(row["Asset ID Tag"]))
+        pdf.text(65, y_position, f"{row['Thickness (tw) in']:.3f} in")
+        pdf.text(105, y_position, f"{row['Slenderness Check']:.2f}")
+        
+        # Inject context-aware coloring onto screening status indicators
+        if row["FFS Screening Status"] == "Compliant":
+            pdf.set_text_color(22, 101, 52) # Safe operational green text
+            pdf.text(142, y_position, "Level 1 Pass - Compliant Profile")
+        else:
+            pdf.set_text_color(185, 28, 28) # Critical action warning crimson red text
+            pdf.text(142, y_position, "LEVEL 2 REQUIRED - ACTIONS REQUIRED")
+            
+        pdf.set_text_color(0, 0, 0) # Restore default baseline color matrix values
+        y_position += 7.5
+        
+    # Append final page for senior engineer justification signatures tracking
+    pdf.add_page()
+    pdf.set_font("Arial", "B", 12)
+    pdf.text(15, 25, "3. Senior Professional Engineer Review Sign-Off & Remarks")
+    
+    pdf.set_font("Arial", "I", 10)
+    pdf.set_xy(15, 32)
+    pdf.multi_cell(180, 6, remarks if remarks else "No custom component anomalies, process boundaries, or manual design remarks logged by reviewing authority.")
+    
+    return pdf.output()
 
-with st.container(border=True):
-    st.subheader("📄 Verification Compliance Certificate Issuance")
-    if st.button("📥 Compile Full Facility Compliance Audit PDF Assets Bundle", use_container_width=True):
-        st.success("🎉 Authoritative Facility Compliance Audit PDF Manifest generated successfully containing evaluation logs for all 30 listed active assets!")
+# --- FORCING CONSOLIDATED BATCH DOWNLOAD SWITCH INTERFACE ---
+if st.session_state["batch_dataframe"] is not None:
+    # Pre-compile the document bytes directly out of memory
+    pdf_output_data = generate_pdf_report(st.session_state["batch_dataframe"], senior_remarks)
+    
+    st.markdown("<br>", unsafe_allow_html=True)
+    st.download_button(
+        label="📥 Generate & Download Signed Combined FFS Audit Report Bundle",
+        data=bytes(pdf_output_data),
+        file_name="OpenFFS-Combined-Facility-Report.pdf",
+        mime="application/pdf",
+        use_container_width=True
+    )
